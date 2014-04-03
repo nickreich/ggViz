@@ -1,0 +1,102 @@
+ggplot2 tutorial for DataFest 2014, UMass-Amherst
+========================================================
+#### Nicholas Reich: Saturday, 29 March 2014
+
+
+What is ggplot2
+-----
+A great package that creates modern data visualizations. The 'gg' stands for the Grammar of Graphics. The key idea behind ggplot2 is that there is a standard grammar that you use to build plots: "geoms", "aesthetics", "facets". 
+
+
+Some important resources 
+-------
+
+- A [full course of slides on ggplot2](http://courses.had.co.nz/11-rice/), by its creator Hadley Wickham
+- Hadley's [book on ggplot2](http://umass.worldcat.org.silk.library.umass.edu/title/ggplot2-elegant-graphics-for-data-analysis/oclc/656394958) is available for free via UMass library system
+- The [Cookbook for R website](http://www.cookbook-r.com/Graphs/) -- I use this all the time! Great the for little touch-ups.
+
+
+Plotting time series data with ggplot2
+---
+
+First, make sure you have the `ggplot2` package installed as well as the `stockportfolio` package that will allow us to access some time-series data (of stock returns from Yahoo Finance).
+```{r, eval=FALSE}
+install.packages("ggplot2")
+install.packages("stockPortfolio")
+```
+
+Now, we can load the packages and pull down some stock returns.
+```{r, message=FALSE}
+require(stockPortfolio)
+require(ggplot2)
+FB <- getReturns("FB", "day", 
+                 start = "2013-02-01", 
+                 end = "2014-03-28")
+```
+
+These new objects are saved in R as `stockReturns` objects, learn more about them by using the command `?stockReturns`. Here are some more details about one of these objects.
+```{r}
+class(FB)
+names(FB)
+head(FB$full$FB)
+```
+
+We're going to use the "full" FB dataset, which is somewhat cumbersomely retrieved and stored for convenient access below. We also change the class of the Date column so that it is stored as a Date in R, and not just a string variable.
+```{r}
+dat <- FB$full$FB
+dat$Date <- as.Date(dat$Date)
+```
+
+Now, finally, the fun stuff! Note the differences as we specify different geoms.
+```{r, fig.height=4, fig.width=9}
+qplot(Date, Close, data=dat)
+qplot(Date, Close, data=dat, geom="point")
+qplot(Date, Close, data=dat, geom="line")
+```
+
+For data that represents counts of things (like the Volume variable, which means the number of trades for a given stock on a given date), the linerange or ribbon geom might make more sense, depending on what you are trying to convey.
+```{r, fig.height=4, fig.width=9}
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="linerange")
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="ribbon")
+```
+
+You can "stack" geoms on a single graphic...
+```{r, fig.height=4, fig.width=9}
+qplot(Date, y=Close, data=dat, geom=c("line", "smooth"))
+qplot(Date, y=Close, data=dat, geom=c("line", "smooth"), se=FALSE)
+qplot(Date, y=Close, data=dat, geom=c("line", "point", "smooth"), se=FALSE)
+```
+
+
+Tips for polishing ggplot2 figures
+---
+I like a different theme from the default gray background. You can set it like this:
+```{r, fig.height=4, fig.width=9}
+theme_set(theme_bw())
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="linerange")
+```
+
+Also, scales and axes labels and things are unintuitive to start, but once you get the hang of it not so bad. [The R Cookbook site](http://www.cookbook-r.com/Graphs/) is really useful for these kinds of things too. Here are some examples.
+
+This shows how to format the dates. The formatting requires a specific syntax.
+```{r, message=FALSE, tidy=FALSE, fig.height=4, fig.width=9}
+require(scales)
+?strptime
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="linerange") +
+        scale_x_date(labels = date_format("%Y %b")) + 
+        xlab("") + ylab("Daily Volume")
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="linerange") +
+        scale_x_date(labels = date_format("%Y %b"), breaks="1 month") + 
+        xlab("") + ylab("Daily Volume")
+```
+
+Adding text to graphics can be done in an external program like Illustrator or Inkscape, but can't hurt to try doing it in ggplot2...
+```{r, fig.height=4, fig.width=9}
+qplot(Date, ymax=Volume, ymin=0, data=dat, geom="linerange") +
+        scale_x_date(labels = date_format("%Y %b"), breaks="1 month") + 
+        xlab("") + ylab("Daily Volume") +
+        annotate("text", x = as.Date("2013-06-01"), y = 3e8, label = "what is this spike?", color="cornflowerblue")
+```
+
+
+Also, I would be remiss not to mention that the most "complete" and "formal" way to make ggplot plots is to use the `ggplot()` function and build from that instead of using `qplot()`, but I find that I use `qplot()` most of the time!
